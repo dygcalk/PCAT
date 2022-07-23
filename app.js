@@ -1,13 +1,24 @@
 const express = require('express');
 const ejs = require('ejs');
-const path = require('path');
 const mongoose = require('mongoose');
+const fileupload = require('express-fileupload');
+var methodOverride = require('method-override');
 
-const Photo = require('./models/Photo');
+const photoController = require('./controllers/photo');
+const pageController = require('./controllers/page');
 
 const app = express();
 
-mongoose.connect('mongodb://localhost/pcat-test-db');
+const connect = async () => {
+  try {
+    await mongoose.connect(
+      'mongodb+srv://pcat:pcat123@pcat.fik8cbg.mongodb.net/?retryWrites=true&w=majority'
+    );
+    console.log('DB connected');
+  } catch (error) {
+    console.log(error);
+  }
+};
 
 // TEMPLATE ENGINE
 
@@ -17,25 +28,32 @@ app.set('view engine', 'ejs');
 app.use(express.static('public'));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(fileupload());
+app.use(
+  methodOverride('_method', {
+    methods: ['POST', 'GET'],
+  })
+);
 //ROUTES
-app.get('/', async (req, res) => {
-  const photos = await Photo.find();
-  res.render('index', { photos });
-});
-app.get('/about', (req, res) => {
-  res.render('about');
-});
-app.get('/add', (req, res) => {
-  res.render('add');
-});
+app.get('/', photoController.getPhotos);
 
-app.post('/photos', async (req, res) => {
-  await Photo.create(req.body);
-  res.redirect('/');
-});
+app.get('/photo/:id', photoController.getPhoto);
 
-const PORT = 3000;
+app.post('/photos', photoController.createPhoto);
+
+app.put('/photos/:id', photoController.updatePhoto);
+
+app.delete('/photos/:id', photoController.deletePhoto);
+
+app.get('/photos/edit/:id', pageController.getEditPage);
+
+app.get('/about', pageController.getAboutPage);
+
+app.get('/add', pageController.getAddPage);
+
+const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
   console.log('Server is up');
+  connect();
 });
